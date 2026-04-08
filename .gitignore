@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.turbo/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Mobile native
+apps/mobile/android/
+apps/mobile/ios/
+
+# Generated database (built by ETL)
+apps/mobile/src/assets/db/*.db
+
+# Python
+etl/__pycache__/
+etl/src/__pycache__/
+etl/src/**/__pycache__/
+*.pyc
+*.pyo
+etl/.venv/
+etl/venv/
+
+# Sample data (large, tracked separately)
+/sampledata/
+
+# Uploads (server)
+server/uploads/
+
+# Logs
+*.log

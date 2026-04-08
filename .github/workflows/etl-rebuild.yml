@@ -1,0 +1,53 @@
+name: ETL - Rebuild Database
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'etl/**'
+      - 'sampledata/**'
+
+jobs:
+  build-db:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ETL dependencies
+        run: |
+          cd etl
+          pip install -r requirements.txt
+
+      - name: Run ETL pipeline
+        run: |
+          cd etl
+          python -m src.pipeline \
+            --xml ../sampledata/export.xml \
+            --csv ../sampledata/export.csv \
+            --output ../apps/mobile/src/assets/db/scanland.db
+
+      - name: Run ETL tests
+        run: |
+          cd etl
+          python -m pytest tests/ -v
+
+      - name: Validate database
+        run: |
+          DB=apps/mobile/src/assets/db/scanland.db
+          COUNT=$(sqlite3 "$DB" "SELECT COUNT(*) FROM manufacturers;")
+          echo "Records: $COUNT"
+          if [ "$COUNT" -lt 1000 ]; then
+            echo "ERROR: Too few records"
+            exit 1
+          fi
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanland-db
+          path: apps/mobile/src/assets/db/scanland.db

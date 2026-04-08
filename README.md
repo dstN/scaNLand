@@ -1,228 +1,163 @@
-# 🧾 scaNLand – Lebensmittel-Code Scanner
+# scaNLand
 
-> Eine mobile App, mit der man **Genusstauglichkeits- oder Identitätskennzeichen** (z. B. `DE BY 12345 EG`) scannen und Informationen über den zugehörigen Herstellerbetrieb abrufen kann.
+> Offline-first mobile scanner for EU food approval marks
 
----
+scaNLand scans EU food approval identification marks printed on food packaging using your smartphone camera, identifies the manufacturer from an embedded database of ~16,000 German approval entries, and works entirely offline.
 
-## 🚀 Ziel
+## What It Does
 
-Mit **scaNLand** sollen Verbraucher oder Interessierte einfach per Smartphone-Kamera EU-Zulassungsnummern scannen können.  
-Die App liest den Code, sucht ihn in einer zentralen Datenbank und zeigt Details wie Name, Adresse und Betrieb des Herstellers an.
+- **Scan** EU food approval marks via camera OCR (e.g., `DE BY 12345 EG`, `FR 12.345 CE`)
+- **Identify** the manufacturer, address, and approval details instantly — **no internet required**
+- **Submit** unrecognized codes for community review when a match isn't found
+- **Manage** submissions through a secure admin dashboard with fraud detection
 
----
+## Tech Stack
 
-## 🧱 Architekturüberblick
+| Component       | Technology                                                    |
+| --------------- | ------------------------------------------------------------- |
+| Mobile App      | Ionic 8 + Vue 3 + Capacitor 8                                 |
+| Admin Dashboard | Vue 3 SPA                                                     |
+| API Server      | Fastify 5 + Drizzle ORM                                       |
+| Mobile Database | SQLite @capacitor-community/sqlite + sql.js                   |
+| Server Database | SQLite better-sqlite3 (embedded, zero-config)                 |
+| OCR Engine      | @jcesarmobile/capacitor-ocr (primary) / Tesseract.js (backup) |
+| ETL Pipeline    | Python 3.11+                                                  |
+| Monorepo        | Turborepo + npm workspaces                                    |
 
-```text
-[Flutter App]
-    ↓ (HTTP / REST)
-[Backend API - Node.js (Express)]
-    ↓
-[MariaDB/MySQL Datenbank mit Herstellerdaten]
-```
-
-- **Frontend:** Flutter App (Kamera-Scan + Anzeige der Ergebnisse)
-- **Backend:** Node.js + Express REST API
-- **Datenbank:** MariaDB/MySQL
-- **Deployment:** Bestehendes Hosting
-
----
-
-## 🗺️ Projekt-Roadmap
-
-### 1️⃣ Backend – Datenbasis & API
-
-#### a) Datenbeschaffung
-
-- Quelle: [BVL – Bundesamt für Verbraucherschutz und Lebensmittelsicherheit](http://www.bvl.bund.de/bltu)  
-  → Enthält Listen (PDF/Excel) der zugelassenen Lebensmittelbetriebe in Deutschland
-- Extrahiere u. a.:
-  - `code` (z. B. `DE BY 12345 EG`)
-  - `betrieb`
-  - `adresse`
-  - `bundesland`
-  - `land`
-  - `kategorie`
-  - `quelle`
-- Speichere alles in einer CSV → später Import in DB
-
-#### b) Datenbank-Struktur (MySQL/MariaDB)
-
-```sql
-CREATE TABLE hersteller (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  code VARCHAR(50) UNIQUE,
-  name VARCHAR(255),
-  adresse VARCHAR(255),
-  bundesland VARCHAR(100),
-  land VARCHAR(10),
-  kategorie VARCHAR(100),
-  quelle VARCHAR(255),
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_code ON hersteller(code);
-```
-
-#### c) Node.js REST API
-
-- Framework: **Express**
-- DB-Client: **mysql2**
-- Endpoints:
-  - `GET /api/hersteller/:code` → Gibt Hersteller-Infos als JSON zurück
-  - `GET /api/ping` → Healthcheck
-  - (Optional) `GET /api/search?query=mueller` → Textsuche
-- Optional: API-Key-Absicherung
-
-##### Beispiel-Response
-
-```json
-GET /api/hersteller/DE-BY-12345-EG
-→
-{
-  "code": "DE BY 12345 EG",
-  "name": "Müller Fleisch GmbH",
-  "adresse": "Pforzheim",
-  "land": "DE",
-  "bundesland": "Baden-Württemberg"
-}
-```
-
-#### d) Deployment
-
-- `.env` Datei:
-
-  ```bash
-  DB_HOST=localhost
-  DB_USER=dein_user
-  DB_PASS=dein_passwort
-  DB_NAME=scanland
-  PORT=3000
-  ```
-
-- Test lokal:
-
-  ```bash
-  curl http://localhost:3000/api/hersteller/DE-BY-12345-EG
-  ```
-
----
-
-### 2️⃣ Frontend – Flutter App
-
-#### a) Grundstruktur
-
-- Flutter SDK installieren
-- Neues Projekt erstellen:
-
-  ```bash
-  flutter create scanland
-  ```
-
-- Abhängigkeiten:
-  - `mobile_scanner` → Kamera-Scanner
-  - `http` → API-Aufrufe
-  - `provider` oder `riverpod` → State Management
-
-#### b) Kernfunktionen
-
-1. Kamera öffnet sich → Scan des Codes
-2. App sendet REST-Request an Backend
-3. Backend gibt JSON mit Herstellerdaten zurück
-4. Ergebnis wird angezeigt (Name, Adresse, Betrieb)
-
-#### c) API-Call Beispiel (Flutter)
-
-```dart
-final url = Uri.parse("https://deinedomain.de/api/hersteller/$code");
-final res = await http.get(url);
-final data = jsonDecode(res.body);
-```
-
-#### d) UI / Screens
-
-- **ScannerScreen:** Kameraansicht
-- **ResultScreen:** Anzeige der Herstellerdaten
-- Optional: Offline-Cache oder Favoritenfunktion
-
----
-
-### 3️⃣ Datenpflege & Updates
-
-- Erstimport: BVL-Daten (Deutschland)
-- Regelmäßige Updates (z. B. jährlich)
-- Optional:
-  - CSV-Import-Tool oder Web-Admin-Oberfläche
-  - „Fehlender Betrieb?“–Button in der App (Crowdsourcing)
-
----
-
-### 4️⃣ Erweiterungen (optional)
-
-- Benutzer-Accounts oder API-Key-Auth
-- Logging / Statistiken / Scan-History
-- EU-weite Daten (AGES, NVWA, etc.)
-- Realtime Features (Websocket oder SSE)
-- Admin-Dashboard
-
----
-
-## 🧠 Tech-Stack Übersicht
-
-| Bereich     | Technologie       | Begründung                                         |
-| ----------- | ----------------- | -------------------------------------------------- |
-| **App**     | Flutter           | Cross-Platform, gute Kamera-Integration            |
-| **Backend** | Node.js + Express | Gleiche Sprache wie im Frontend, leichtgewichtig   |
-| **DB**      | MariaDB / MySQL   | Bestehende Infrastruktur, schnell für Leseabfragen |
-
----
-
-## ⚙️ Setup Quickstart
-
-### 🔸 Backend
+## Project Structure
 
 ```bash
-git clone https://github.com/dstN/scaNLand.git
-cd backend
+scaNLand/
+├── apps/mobile/         # Ionic + Vue 3 mobile app
+├── apps/admin/          # Vue 3 admin dashboard
+├── packages/shared/     # Shared types, validators, constants
+├── server/              # Fastify API server
+├── etl/                 # Python ETL pipeline (BVL data → SQLite)
+├── sampledata/          # BVL source data (XML + CSV)
+├── scripts/             # Build and release scripts
+└── .github/workflows/   # CI/CD pipelines
+```
+
+## Prerequisites
+
+- **Node.js** 20+
+- **Python** 3.11+
+- **npm** 10+
+- **Android Studio** (for Android builds)
+- **Xcode** (for iOS builds, macOS only)
+
+## Getting Started
+
+### 1. Install Dependencies
+
+```bash
+# Install all workspace dependencies
 npm install
-cp .env.example .env
-pm2 start api.js
+
+# Install Python ETL dependencies
+cd etl && pip install -r requirements.txt && cd ..
 ```
 
-### 🔸 Datenbank
+### 2. Build the Database
 
 ```bash
-mysql -u user -p dbname < schema.sql
-mysqlimport --local --ignore-lines=1 --fields-terminated-by=',' dbname hersteller.csv
+# Run ETL pipeline to generate SQLite DB from BVL data
+python etl/src/pipeline.py --source sampledata/ --output apps/mobile/src/assets/db/scanland.db
 ```
 
-### 🔸 Flutter-App
+### 3. Run the Mobile App (Development)
 
 ```bash
-cd flutter_app
-flutter pub get
-flutter run
+# Start the Ionic dev server
+cd apps/mobile
+npm run dev
 ```
 
----
+### 4. Run on Device
 
-## 📚 Quellen & Lizenz
+```bash
+# Sync web assets to native project
+npx cap sync
 
-- Datenquelle: **BVL** – Bundesamt für Verbraucherschutz und Lebensmittelsicherheit
-- Wikipedia: [Genusstauglichkeits- und Identitätskennzeichen](https://de.wikipedia.org/wiki/Genusstauglichkeits-_und_Identit%C3%A4tskennzeichen)
-- App & API Code: © [dstN](https://github.com/dstN) / [scaNLand](https://github.com/dstN/scaNLand)
-- Lizenz: MIT
+# Open in Android Studio
+npx cap open android
 
----
+# Or open in Xcode (macOS)
+npx cap open ios
+```
 
-### ✅ TL;DR
+### 5. Run the Admin Dashboard
 
-> 1️⃣ Backend + Datenbank aufsetzen  
-> 2️⃣ API-Endpunkte implementieren  
-> 3️⃣ Flutter-App mit Kamera & API-Verbindung bauen  
-> 4️⃣ Daten regelmäßig aktualisieren  
-> 5️⃣ Optional: Crowdsourcing, Auth, EU-Erweiterung
+```bash
+# Start admin dev server
+cd apps/admin
+npm run dev
+```
 
----
+### 6. Run the API Server & Admin Dashboard
 
-Made with ❤️, Node.js & Flutter by [dstN](https://github.com/dstN)  
-👉 [https://github.com/dstN/scaNLand](https://github.com/dstN/scaNLand)
+The server uses an embedded SQLite database — **no external database server needed**.
+
+```bash
+# 1. Set up the database (creates tables + seeds admin user)
+npm run setup:backend
+
+# 2. Start the Fastify API server (port 3000)
+cd server
+npm run dev
+```
+
+**Testing the Admin Dashboard:**
+
+1. Open a new terminal and run `cd apps/admin && npm run dev`
+2. Open `http://localhost:5174` in your browser
+3. Login with the default credentials:
+   - **Email:** `admin@scanland.app`
+   - **Password:** `password123`
+
+## Available Scripts
+
+| Script                | Description                                    |
+| --------------------- | ---------------------------------------------- |
+| `npm run dev`         | Start all apps in development mode (turborepo) |
+| `npm run build`       | Build all packages and apps                    |
+| `npm run lint`        | Lint all packages                              |
+| `npm run test`        | Run all tests                                  |
+| `scripts/build-db.sh` | Run ETL + copy DB to mobile assets             |
+| `scripts/release.sh`  | Version bump + tag for release                 |
+
+## Database
+
+The app embeds a pre-built SQLite database containing German food approval entries from the BVL (Bundesamt für Verbraucherschutz und Lebensmittelsicherheit). The Python ETL pipeline parses official BVL XML and CSV exports, normalizes approval codes, and produces the SQLite file.
+
+Updates are rare (last official BVL update: 2023). When new data is available, rebuild the DB and release an app update.
+
+## Supported Approval Mark Formats
+
+| Format           | Country | EU Suffix |
+| ---------------- | ------- | --------- |
+| `DE BY 12345 EG` | Germany | EG        |
+| `DE NW 50264 EG` | Germany | EG        |
+| `FR 12.345 CE`   | France  | CE        |
+| `PL 123456 WE`   | Poland  | WE        |
+| `IT 1234 CE`     | Italy   | CE        |
+
+**Recognized EU suffixes:** EG, EC, CE, WE, EF, EY — all normalized to canonical form for lookup.
+
+## Architecture
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture document including:
+
+- System architecture diagram
+- SQLite schema design
+- OCR pipeline and preprocessing
+- Code normalization engine
+- Fuzzy matching strategy
+- Admin moderation workflow
+- Security model
+- Deployment workflow
+- Future EU scaling strategy
+
+## License
+
+Private — All rights reserved.

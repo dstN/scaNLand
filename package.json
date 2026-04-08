@@ -1,0 +1,28 @@
+{
+  "name": "scanland",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline-first mobile scanner for EU food approval marks",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "server"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean",
+    "setup:backend": "npm run db:setup -w server"
+  },
+  "packageManager": "npm@10.8.2",
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

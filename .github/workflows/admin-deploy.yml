@@ -1,0 +1,36 @@
+name: Admin - Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/admin/**'
+      - 'packages/shared/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=packages/shared
+
+      - name: Build admin dashboard
+        run: npm run build --workspace=apps/admin
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-build
+          path: apps/admin/dist
